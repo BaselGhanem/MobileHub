@@ -137,8 +137,8 @@ initAuth(
     buildSidebar();
     initModalClosers();
 
-    // ── Start listeners — only navigate on FIRST load ──
-    startListeners((key) => {
+    // ── Start listeners with explicit shopId ──
+    startListeners(user.shopId, (key) => {
       if (key === 'settings') {
         // Update shop name in sidebar
         const nameEl = document.getElementById('sidebarShopName');
