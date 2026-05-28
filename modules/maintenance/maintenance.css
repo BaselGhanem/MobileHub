@@ -1,0 +1,6 @@
+/* modules/maintenance/maintenance.css */
+.maintenance-module { display: block; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 6px; }
+.status-dot.active   { background: var(--warning); animation: pulse 2s infinite; }
+.status-dot.ready    { background: var(--success); }
+.status-dot.delivered{ background: var(--text2); }

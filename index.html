@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Hub — تسجيل الدخول</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="src/css/variables.css">
+<link rel="stylesheet" href="src/css/base.css">
+<link rel="stylesheet" href="src/css/components.css">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+  /* Grid BG */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.12) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.08) 0%, transparent 45%);
+    pointer-events: none;
+  }
+
+  .login-wrap {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 420px;
+    padding: 16px;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 44px 36px;
+    box-shadow: var(--shadow), var(--glow);
+    animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  .login-logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .login-logo .icon-wrap {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 34px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(108,99,255,0.4);
+  }
+  .login-logo h1 {
+    font-size: 26px; font-weight: 900;
+    background: linear-gradient(135deg, #fff, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .login-logo p { color: var(--text2); font-size: 13px; margin-top: 5px; }
+
+  .role-tabs {
+    display: flex; gap: 6px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    margin-bottom: 26px;
+  }
+  .role-tab {
+    flex: 1; padding: 9px 6px;
+    border: none; border-radius: 7px;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'Cairo', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all var(--trans);
+  }
+  .role-tab.active {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 3px 10px rgba(108,99,255,0.4);
+  }
+
+  #loginAlert, #trackAlert { min-height: 0; }
+
+  .track-section { display: none; }
+
+  .forgot-link {
+    display: block; text-align: center;
+    font-size: 12px; color: var(--text2);
+    margin-top: 12px; cursor: pointer;
+    transition: color var(--trans);
+  }
+  .forgot-link:hover { color: var(--accent); }
+
+  /* Powered by */
+  .powered {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .powered span { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="icon-wrap">📱</div>
+      <h1 id="shopTitle">Mobile Hub</h1>
+      <p>نظام إدارة محلات الموبايل</p>
+    </div>
+
+    <!-- Role tabs -->
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="setLoginRole('staff')">🔑 دخول الموظفين</button>
+      <button class="role-tab" onclick="setLoginRole('track')">📍 تتبع جهاز</button>
+    </div>
+
+    <!-- Staff login form -->
+    <div id="staffSection">
+      <div class="form-group">
+        <label class="form-label">البريد الإلكتروني</label>
+        <input type="email" class="form-control" id="loginEmail"
+               placeholder="example@mobilehub.jo" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور</label>
+        <input type="password" class="form-control" id="loginPass"
+               placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div id="loginAlert"></div>
+      <button class="btn btn-primary btn-block btn-lg" id="loginBtn" onclick="doLogin()">
+        دخول ←
+      </button>
+      <span class="forgot-link">نسيت كلمة المرور؟ تواصل مع المدير</span>
+    </div>
+
+    <!-- Track device form -->
+    <div id="trackSection" class="track-section">
+      <div class="form-group">
+        <label class="form-label">رقم هاتفك لتتبع جهازك</label>
+        <input type="tel" class="form-control" id="trackPhone"
+               placeholder="07XXXXXXXX"
+               style="text-align:center;font-size:20px;letter-spacing:3px;"
+               onkeydown="if(event.key==='Enter') doTrack()">
+      </div>
+      <div id="trackAlert"></div>
+      <button class="btn btn-primary btn-block" onclick="doTrack()">تتبع الجهاز 🔍</button>
+    </div>
+
+  </div>
+  <div class="powered">مشغّل بواسطة <span>Mobile Hub</span> © 2026</div>
+</div>
+
+<script type="module">
+import { login }     from './src/js/auth.js';
+import { db, COLLECTIONS } from './src/js/firebase.js';
+import { collection, query, where, getDocs, orderBy, limit }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── Role toggle ──
+window.setLoginRole = (role) => {
+  document.querySelectorAll('.role-tab').forEach((t,i) =>
+    t.classList.toggle('active', ['staff','track'][i] === role));
+  document.getElementById('staffSection').style.display = role === 'staff' ? 'block' : 'none';
+  document.getElementById('trackSection').style.display = role === 'track' ? 'block' : 'none';
+};
+
+// ── Login ──
+window.doLogin = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const alertEl = document.getElementById('loginAlert');
+  const btn   = document.getElementById('loginBtn');
+
+  if (!email || !pass) {
+    alertEl.innerHTML = '<div class="alert alert-danger">❌ أدخل البريد وكلمة المرور</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;"></div>';
+  alertEl.innerHTML = '';
+
+  try {
+    await login(email, pass);
+    window.location.href = 'app.html';
+  } catch (err) {
+    const msg = err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+      ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      : err.message;
+    alertEl.innerHTML = `<div class="alert alert-danger">❌ ${msg}</div>`;
+    btn.disabled = false;
+    btn.innerHTML = 'دخول ←';
+  }
+};
+
+// ── Track device by phone ──
+window.doTrack = async () => {
+  const phone = document.getElementById('trackPhone').value.trim();
+  const alertEl = document.getElementById('trackAlert');
+  if (!phone) { alertEl.innerHTML = '<div class="alert alert-warning">⚠️ أدخل رقم هاتفك</div>'; return; }
+
+  alertEl.innerHTML = '<div class="alert alert-info">🔍 جاري البحث...</div>';
+
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.DEVICES),
+      where('phone', '==', phone),
+      orderBy('date', 'desc'),
+      limit(5)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      alertEl.innerHTML = '<div class="alert alert-danger">❌ لم يتم العثور على أي جهاز بهذا الرقم</div>';
+      return;
+    }
+    // redirect to track page with phone as param
+    window.location.href = `track.html?phone=${encodeURIComponent(phone)}`;
+  } catch (err) {
+    alertEl.innerHTML = `<div class="alert alert-danger">❌ خطأ: ${err.message}</div>`;
+  }
+};
+
+// ── Load shop name ──
+(async () => {
+  try {
+    const snap = await getDocs(collection(db, COLLECTIONS.SETTINGS));
+    snap.forEach(d => {
+      const name = d.data()?.name;
+      if (name) document.getElementById('shopTitle').textContent = name;
+    });
+  } catch(_) {}
+})();
+</script>
+</body>
+</html>
