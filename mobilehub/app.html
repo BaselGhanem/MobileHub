@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Hub</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="src/css/variables.css">
+<link rel="stylesheet" href="src/css/base.css">
+<link rel="stylesheet" href="src/css/components.css">
+<link rel="stylesheet" href="src/css/sidebar.css">
+<link rel="stylesheet" href="src/css/responsive.css">
+<link rel="stylesheet" href="modules/maintenance/maintenance.css">
+<link rel="stylesheet" href="modules/pos/pos.css">
+<link rel="stylesheet" href="modules/warehouse/warehouse.css">
+<link rel="stylesheet" href="modules/purchases/purchases.css">
+<link rel="stylesheet" href="modules/hr/hr.css">
+<link rel="stylesheet" href="modules/reports/reports.css">
+<link rel="stylesheet" href="modules/settings/settings.css">
+</head>
+<body>
+
+<!-- TOPBAR mobile -->
+<header class="topbar" id="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">📱</div>
+    <div class="topbar-title">Mobile <span>Hub</span></div>
+  </div>
+  <button class="hamburger" onclick="_router.toggleSidebar()">☰</button>
+</header>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">📱</div>
+      <div class="sidebar-brand-text">
+        <h1>Mobile <span>Hub</span></h1>
+        <div class="sidebar-shop-name" id="sidebarShopName">جاري التحميل...</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="spinner"></div>
+    </nav>
+    <div class="sidebar-user" id="sidebarUser"></div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="_router.closeSidebar()"></div>
+
+  <main class="main-content">
+    <div class="content-area" id="contentArea">
+      <div style="display:flex;align-items:center;justify-content:center;height:70vh;flex-direction:column;gap:16px;">
+        <div class="spinner"></div>
+        <p style="color:var(--text2);font-size:14px;">جاري التحميل...</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav"></nav>
+
+<!-- Frozen overlay -->
+<div id="frozenOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.95);z-index:9000;
+     align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="font-size:56px;">🔒</div>
+  <div style="font-size:20px;font-weight:900;color:var(--danger);">الحساب موقوف</div>
+  <div style="font-size:14px;color:var(--text2);text-align:center;max-width:300px;line-height:1.8;">
+    تم إيقاف هذا المحل مؤقتاً.<br>يرجى التواصل مع الدعم لتجديد الاشتراك.
+  </div>
+</div>
+
+<script type="module">
+import { initAuth, logout, currentUser, canAccess, ROLES } from './src/js/auth.js';
+import { startListeners, stopListeners, state }            from './src/js/state.js';
+import { buildSidebar, go, registerModule }                from './src/js/router.js';
+import { initModalClosers, toast }                         from './src/js/utils.js';
+
+// ── Import all modules ──
+import { register as regOverview    } from './modules/maintenance/overview.js';
+import { register as regMaintenance } from './modules/maintenance/maintenance.js';
+import { register as regMyWork      } from './modules/maintenance/mywork.js';
+import { register as regTechs       } from './modules/maintenance/technicians.js';
+import { register as regManageTechs } from './modules/settings/manage-techs.js';
+import { register as regSettings    } from './modules/settings/settings.js';
+
+// ── Stub modules (Phase 2) ──
+function stubModule(id, label, icon, group) {
+  registerModule(id, {
+    label, icon, group,
+    render: () => `
+      <div class="page-header">
+        <div class="page-title">${icon} ${label}</div>
+        <div class="page-subtitle">قيد التطوير — سيكون متاحاً قريباً</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  height:50vh;gap:16px;color:var(--text2);">
+        <div style="font-size:64px;">${icon}</div>
+        <div style="font-size:18px;font-weight:700;">هذا الموديول قيد البناء</div>
+        <div style="font-size:13px;">المرحلة 2 — قريباً</div>
+      </div>`,
+  });
+}
+
+// ── Register real modules ──
+regOverview(registerModule);
+regMaintenance(registerModule);
+regMyWork(registerModule);
+regTechs(registerModule);
+regManageTechs(registerModule);
+regSettings(registerModule);
+
+// ── Register stubs for unbuilt modules ──
+stubModule('pos',             'المبيعات / POS',      '🛒', 'العمليات');
+stubModule('stock-purchases', 'مشتريات بضاعة',       '📦', 'المشتريات والمخزون');
+stubModule('other-purchases', 'مشتريات أخرى',        '🏪', 'المشتريات والمخزون');
+stubModule('warehouse',       'المستودع',             '🏭', 'المشتريات والمخزون');
+stubModule('hr',              'الموارد البشرية',      '👥', 'الموارد البشرية');
+stubModule('reports',         'التقارير المالية',     '📈', 'التقارير');
+
+// ── Track if first load done ──
+let _firstRender = false;
+
+// ── Auth listener ──
+initAuth(
+  async (user) => {
+    // ── Check if shop is frozen ──
+    if (state.settings?.frozen) {
+      document.getElementById('frozenOverlay').style.display = 'flex';
+      return;
+    }
+
+    updateSidebarUser(user);
+    buildSidebar();
+    initModalClosers();
+
+    // ── Start listeners — only navigate on FIRST load ──
+    startListeners((key) => {
+      if (key === 'settings') {
+        // Update shop name in sidebar
+        const nameEl = document.getElementById('sidebarShopName');
+        if (nameEl) nameEl.textContent = state.settings?.name || 'Mobile Hub';
+        document.title = (state.settings?.name || 'Mobile Hub') + ' — لوحة التحكم';
+
+        // Check freeze status
+        if (state.settings?.frozen) {
+          document.getElementById('frozenOverlay').style.display = 'flex';
+        }
+      }
+      // Don't re-render on every data change — modules handle their own refresh
+    });
+
+    // ── Navigate once ──
+    if (!_firstRender) {
+      _firstRender = true;
+      const first = canAccess('overview') ? 'overview' : 'mywork';
+      go(first);
+    }
+  },
+  () => {
+    stopListeners();
+    _firstRender = false;
+    window.location.href = 'index.html';
+  }
+);
+
+// ── Sidebar user ──
+function updateSidebarUser(user) {
+  const el = document.getElementById('sidebarUser');
+  if (!el) return;
+  const roleLabel = { admin:'👑 مدير', tech:'🔧 فني', cashier:'🛒 كاشير' }[user.role] || user.role;
+  el.innerHTML = `
+    <div class="avatar avatar-md">${user.avatar || '؟'}</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">${user.name}</div>
+      <div class="sidebar-user-role">${roleLabel}</div>
+    </div>
+    <button class="sidebar-logout" title="خروج" onclick="window._doLogout()">↩</button>
+  `;
+}
+
+window._doLogout = async () => {
+  if (!window.confirm('تأكيد الخروج؟')) return;
+  await logout();
+};
+</script>
+</body>
+</html>

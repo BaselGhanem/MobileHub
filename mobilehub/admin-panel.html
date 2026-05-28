@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Hub — لوحة المزود</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="src/css/variables.css">
+<link rel="stylesheet" href="src/css/base.css">
+<link rel="stylesheet" href="src/css/components.css">
+<style>
+  body { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+  .provider-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 32px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .provider-logo {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 16px; display: flex; align-items: center;
+    justify-content: center; font-size: 28px;
+    box-shadow: 0 4px 14px rgba(108,99,255,0.4);
+  }
+  .provider-header h1 { font-size: 22px; font-weight: 900; }
+  .provider-header p  { color: var(--text2); font-size: 13px; }
+
+  /* Login */
+  .login-wrap {
+    max-width: 380px; margin: 80px auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 36px;
+    box-shadow: var(--shadow), var(--glow);
+    animation: slideUp 0.4s ease;
+  }
+
+  /* Shop card */
+  .shop-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 12px; transition: all var(--trans);
+  }
+  .shop-card:hover { border-color: var(--accent); }
+  .shop-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .shop-icon.frozen { background: linear-gradient(135deg, var(--danger), #c0392b); }
+  .shop-info { flex: 1; min-width: 0; }
+  .shop-name { font-size: 15px; font-weight: 700; }
+  .shop-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .shop-id   { font-family: 'JetBrains Mono',monospace; font-size: 10px; color: var(--text3); }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .toggle-label { font-size: 12px; font-weight: 700; }
+  .toggle-label.active { color: var(--success); }
+  .toggle-label.frozen { color: var(--danger); }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative; width: 48px; height: 26px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--danger); border-radius: 100px;
+    transition: all var(--trans);
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; top: 3px; right: 3px;
+    transition: transform var(--trans);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--success); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(-22px); }
+
+  .super-warning {
+    background: rgba(255,71,87,0.08);
+    border: 1px solid rgba(255,71,87,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px; font-size: 13px;
+    color: var(--danger); margin-bottom: 20px;
+  }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 12px; margin-bottom: 24px;
+  }
+  .mini-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px;
+    text-align: center;
+  }
+  .mini-stat .n { font-family: 'JetBrains Mono',monospace; font-size: 24px; font-weight: 900; }
+  .mini-stat .l { font-size: 12px; color: var(--text2); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="loginScreen">
+  <div class="login-wrap">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
+      <h2 style="font-size:20px;font-weight:900;">لوحة المزود</h2>
+      <p style="color:var(--text2);font-size:13px;margin-top:6px;">إدارة جميع المحلات</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور السرية</label>
+      <input type="password" class="form-control" id="providerPass"
+             placeholder="••••••••"
+             onkeydown="if(event.key==='Enter') checkPass()">
+    </div>
+    <div id="passAlert"></div>
+    <button class="btn btn-primary btn-block" onclick="checkPass()">دخول ←</button>
+  </div>
+</div>
+
+<!-- Main panel (hidden until login) -->
+<div id="mainPanel" style="display:none;">
+
+  <div class="provider-header">
+    <div class="provider-logo">📱</div>
+    <div>
+      <h1>لوحة المزود — Mobile Hub</h1>
+      <p>إدارة جميع المحلات المشتركة</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-right:auto;" onclick="loadShops()">🔄 تحديث</button>
+    <button class="btn btn-danger btn-sm" onclick="document.getElementById('loginScreen').style.display='flex';document.getElementById('mainPanel').style.display='none';">خروج</button>
+  </div>
+
+  <div class="super-warning">
+    ⚠️ هاي الصفحة للمزود فقط — لا تشارك رابطها مع أصحاب المحلات. التجميد يمنع الدخول فوراً.
+  </div>
+
+  <div class="stats-row" id="statsRow">
+    <div class="mini-stat"><div class="n" id="st-total">-</div><div class="l">إجمالي المحلات</div></div>
+    <div class="mini-stat"><div class="n" style="color:var(--success);" id="st-active">-</div><div class="l">محلات نشطة</div></div>
+    <div class="mini-stat"><div class="n" style="color:var(--danger);" id="st-frozen">-</div><div class="l">محلات مجمدة</div></div>
+  </div>
+
+  <div id="shopsList">
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, getDocs, doc, updateDoc
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU',
+  authDomain:        'mobilehub-4eb1d.firebaseapp.com',
+  projectId:         'mobilehub-4eb1d',
+  storageBucket:     'mobilehub-4eb1d.firebasestorage.app',
+  messagingSenderId: '13420871425',
+  appId:             '1:13420871425:web:76fb7e44e6f23e0e25a500',
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = initializeFirestore(app, {
+  cache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+
+// ── Provider password (change this!) ──
+const PROVIDER_PASS = 'mobilehub2026';
+
+window.checkPass = () => {
+  const pass = document.getElementById('providerPass').value;
+  if (pass === PROVIDER_PASS) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainPanel').style.display  = 'block';
+    loadShops();
+  } else {
+    document.getElementById('passAlert').innerHTML =
+      '<div class="alert alert-danger" style="margin-top:12px;">❌ كلمة المرور غلط</div>';
+  }
+};
+
+// ── Load all shops ──
+window.loadShops = async () => {
+  const listEl = document.getElementById('shopsList');
+  listEl.innerHTML = '<div class="spinner"></div>';
+
+  const snap   = await getDocs(collection(db, 'settings'));
+  const shops  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const total  = shops.length;
+  const frozen = shops.filter(s => s.frozen).length;
+  document.getElementById('st-total').textContent  = total;
+  document.getElementById('st-active').textContent = total - frozen;
+  document.getElementById('st-frozen').textContent = frozen;
+
+  if (!shops.length) {
+    listEl.innerHTML = '<div class="table-empty"><div class="icon">🏪</div><p>لا توجد محلات بعد</p></div>';
+    return;
+  }
+
+  listEl.innerHTML = shops.map(shop => {
+    const isFrozen = !!shop.frozen;
+    return `
+      <div class="shop-card">
+        <div class="shop-icon ${isFrozen ? 'frozen' : ''}">
+          ${isFrozen ? '🔒' : '📱'}
+        </div>
+        <div class="shop-info">
+          <div class="shop-name">${shop.name || 'محل بدون اسم'}</div>
+          <div class="shop-meta">
+            ${shop.phone ? '📞 ' + shop.phone : ''}
+            ${shop.address ? ' · ' + shop.address : ''}
+            ${!shop.phone && !shop.address ? 'لا توجد معلومات إضافية' : ''}
+          </div>
+          <div class="shop-id">${shop.id}</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label ${isFrozen ? 'frozen' : 'active'}" id="lbl-${shop.id}">
+            ${isFrozen ? '🔒 مجمد' : '✅ نشط'}
+          </span>
+          <label class="toggle" title="${isFrozen ? 'إلغاء التجميد' : 'تجميد المحل'}">
+            <input type="checkbox" ${isFrozen ? '' : 'checked'}
+                   onchange="window.toggleShop('${shop.id}', this.checked)">
+            <div class="toggle-slider"></div>
+          </label>
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+// ── Toggle freeze ──
+window.toggleShop = async (shopId, isActive) => {
+  const action = isActive ? 'تفعيل' : 'تجميد';
+  if (!confirm(`هل تريد ${action} محل "${shopId}"؟`)) {
+    loadShops(); return;
+  }
+  try {
+    await updateDoc(doc(db, 'settings', shopId), { frozen: !isActive });
+    const lbl = document.getElementById('lbl-' + shopId);
+    if (lbl) {
+      lbl.textContent  = isActive ? '✅ نشط' : '🔒 مجمد';
+      lbl.className    = `toggle-label ${isActive ? 'active' : 'frozen'}`;
+    }
+    // refresh stats
+    loadShops();
+  } catch(err) {
+    alert('❌ خطأ: ' + err.message);
+    loadShops();
+  }
+};
+</script>
+</body>
+</html>
