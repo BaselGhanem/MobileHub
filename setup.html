@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mobile Hub — الإعداد الأولي</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="src/css/variables.css">
 <link rel="stylesheet" href="src/css/base.css">
 <link rel="stylesheet" href="src/css/components.css">
@@ -221,7 +222,7 @@
 
 <script type="module">
 import { initializeApp }                      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp }
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, collection, addDoc }
                                               from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, createUserWithEmailAndPassword, signOut }
                                               from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -236,7 +237,7 @@ const firebaseConfig = {
 };
 
 const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
+const db = initializeFirestore(app, { cache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 const auth = getAuth(app);
 
 // ── Helpers ──

@@ -1,12 +1,12 @@
 // src/js/firebase.js
-import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore,
-         enableIndexedDbPersistence }
-                                from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth }              from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getAnalytics }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
+         initializeFirestore,
+         persistentLocalCache,
+         persistentMultipleTabManager }
+                           from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-// ── Config (باسل — لا تشارك هذا الملف علناً بدون بيئة variables) ──
 const firebaseConfig = {
   apiKey:            'AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU',
   authDomain:        'mobilehub-4eb1d.firebaseapp.com',
@@ -17,38 +17,32 @@ const firebaseConfig = {
   measurementId:     'G-71V9496Z17'
 };
 
-// ── Init ──
-const app       = initializeApp(firebaseConfig);
-export const db   = getFirestore(app);
-export const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
 
-// Optional analytics
-try { getAnalytics(app); } catch (_) {}
-
-// ── Offline persistence (works offline, syncs when back online) ──
-enableIndexedDbPersistence(db).catch(err => {
-  if (err.code === 'failed-precondition') {
-    console.warn('[Firebase] Multiple tabs open — persistence only in one tab.');
-  } else if (err.code === 'unimplemented') {
-    console.warn('[Firebase] Browser does not support persistence.');
-  }
+// ── Modern offline persistence (multi-tab safe, no deprecation warning) ──
+export const db = initializeFirestore(app, {
+  cache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
 });
 
-// ── Collection name constants (single source of truth) ──
+export const auth = getAuth(app);
+
+// ── Collection name constants ──
 export const COLLECTIONS = {
-  USERS:             'users',
-  DEVICES:           'devices',
-  SALES:             'sales',
-  PRODUCTS:          'products',
-  STOCK_PURCHASES:   'stockPurchases',
-  OTHER_PURCHASES:   'otherPurchases',
-  WAREHOUSE:         'warehouse',
-  WH_MOVEMENTS:      'whMovements',
-  EMPLOYEES:         'employees',
-  ATTENDANCE:        'attendance',
-  ADVANCES:          'advances',
-  SALARY_RECORDS:    'salaryRecords',
-  INSURANCE:         'insurancePayments',
-  SETTINGS:          'settings',
-  CUSTOMERS:         'customers',
+  USERS:            'users',
+  DEVICES:          'devices',
+  SALES:            'sales',
+  PRODUCTS:         'products',
+  STOCK_PURCHASES:  'stockPurchases',
+  OTHER_PURCHASES:  'otherPurchases',
+  WAREHOUSE:        'warehouse',
+  WH_MOVEMENTS:     'whMovements',
+  EMPLOYEES:        'employees',
+  ATTENDANCE:       'attendance',
+  ADVANCES:         'advances',
+  SALARY_RECORDS:   'salaryRecords',
+  INSURANCE:        'insurancePayments',
+  SETTINGS:         'settings',
+  CUSTOMERS:        'customers',
 };
