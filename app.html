@@ -75,7 +75,8 @@ import { initAuth, logout, currentUser, canAccess, ROLES } from './src/js/auth.j
 import { startListeners, stopListeners, state }            from './src/js/state.js';
 import { buildSidebar, go, registerModule }                from './src/js/router.js';
 import { initModalClosers, toast }                         from './src/js/utils.js';
-
+window.closeModal = closeModal;
+window.openModal  = openModal;
 // ── Import all modules ──
 import { register as regOverview    } from './modules/maintenance/overview.js';
 import { register as regMaintenance } from './modules/maintenance/maintenance.js';
