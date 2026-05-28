@@ -2,7 +2,7 @@
 import { db, COLLECTIONS } from './firebase.js';
 import {
   collection, onSnapshot, query,
-  orderBy, limit, where, doc
+  limit, where, doc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 export const state = {
@@ -28,38 +28,33 @@ export const state = {
 
 const _unsubs = [];
 
-// ── shopId passed explicitly — no circular import needed ──
+// Sort client-side — no composite index needed
+const sortBy = (arr, key, desc = true) =>
+  [...arr].sort((a, b) => {
+    const av = a[key] || '', bv = b[key] || '';
+    return desc ? bv.localeCompare(av) : av.localeCompare(bv);
+  });
+
 export function startListeners(shopId, onChange) {
   if (!shopId) {
     console.error('[state] startListeners called without shopId');
     return;
   }
-
+  console.log('[state] Starting listeners for shopId:', shopId);
   state.shopId = shopId;
 
-  const listenShop = (colName, stateKey, extraOrders = []) => {
+  const listen = (colName, stateKey, sortKey = 'date', sortDesc = true) => {
     state.loading[stateKey] = true;
-
-    const q = query(
-      collection(db, colName),
-      where('shopId', '==', shopId),
-      ...extraOrders,
-      limit(300)
-    );
-
+    const q = query(collection(db, colName), where('shopId', '==', shopId), limit(300));
     const unsub = onSnapshot(q,
       (snap) => {
-        state[stateKey] = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        const raw = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        state[stateKey] = sortKey ? sortBy(raw, sortKey, sortDesc) : raw;
         state.loading[stateKey] = false;
         onChange(stateKey);
       },
       (err) => {
-        // Firestore index errors are normal on first run — user sees link in console to create index
-        if (err.code === 'failed-precondition') {
-          console.warn(`[state] ${stateKey} needs a Firestore index — click the link in the error above to create it.`);
-        } else {
-          console.error(`[state] ${stateKey}:`, err.code, err.message);
-        }
+        console.error('[state] ' + stateKey + ':', err.code, err.message);
         state[stateKey] = [];
         state.loading[stateKey] = false;
         onChange(stateKey);
@@ -68,28 +63,26 @@ export function startListeners(shopId, onChange) {
     _unsubs.push(unsub);
   };
 
-  listenShop(COLLECTIONS.DEVICES,         'devices',          [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.SALES,           'sales',            [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.PRODUCTS,        'products',         [orderBy('name')]);
-  listenShop(COLLECTIONS.STOCK_PURCHASES, 'stockPurchases',   [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.OTHER_PURCHASES, 'otherPurchases',   [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.WAREHOUSE,       'warehouse',        [orderBy('name')]);
-  listenShop(COLLECTIONS.WH_MOVEMENTS,    'whMovements',      [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.EMPLOYEES,       'employees',        [orderBy('name')]);
-  listenShop(COLLECTIONS.ATTENDANCE,      'attendance',       [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.ADVANCES,        'advances',         [orderBy('date', 'desc')]);
-  listenShop(COLLECTIONS.SALARY_RECORDS,  'salaryRecords',    [orderBy('month', 'desc')]);
-  listenShop(COLLECTIONS.INSURANCE,       'insurancePayments',[orderBy('month', 'desc')]);
-  listenShop(COLLECTIONS.CUSTOMERS,       'customers',        [orderBy('name')]);
+  listen(COLLECTIONS.DEVICES,         'devices',           'date',  true);
+  listen(COLLECTIONS.SALES,           'sales',             'date',  true);
+  listen(COLLECTIONS.PRODUCTS,        'products',          'name',  false);
+  listen(COLLECTIONS.STOCK_PURCHASES, 'stockPurchases',    'date',  true);
+  listen(COLLECTIONS.OTHER_PURCHASES, 'otherPurchases',    'date',  true);
+  listen(COLLECTIONS.WAREHOUSE,       'warehouse',         'name',  false);
+  listen(COLLECTIONS.WH_MOVEMENTS,    'whMovements',       'date',  true);
+  listen(COLLECTIONS.EMPLOYEES,       'employees',         'name',  false);
+  listen(COLLECTIONS.ATTENDANCE,      'attendance',        'date',  true);
+  listen(COLLECTIONS.ADVANCES,        'advances',          'date',  true);
+  listen(COLLECTIONS.SALARY_RECORDS,  'salaryRecords',     'month', true);
+  listen(COLLECTIONS.INSURANCE,       'insurancePayments', 'month', true);
+  listen(COLLECTIONS.CUSTOMERS,       'customers',         'name',  false);
 
-  // Settings — doc ID = shopId
+  // Settings — single doc
   const su = onSnapshot(
     doc(db, COLLECTIONS.SETTINGS, shopId),
     (snap) => {
-      if (snap.exists()) {
-        state.settings = { _id: snap.id, ...snap.data() };
-        onChange('settings');
-      }
+      if (snap.exists()) state.settings = { _id: snap.id, ...snap.data() };
+      onChange('settings');
     },
     (err) => console.error('[state] settings:', err.code)
   );
@@ -102,7 +95,6 @@ export function stopListeners() {
   state.shopId = null;
 }
 
-// ── Helpers ──
 export const empName      = (id)  => state.employees.find(e => e._id === id)?.name ?? '—';
 export const today        = ()    => new Date().toISOString().slice(0, 10);
 export const currentMonth = ()    => new Date().toISOString().slice(0, 7);
