@@ -7,34 +7,33 @@ import {
   createUserWithEmailAndPassword
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-  doc, getDoc, setDoc
+  doc, getDoc, setDoc, collection, query, where, getDocs
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// ── Current user cache ──
-export let currentUser = null;   // { uid, email, name, role, avatar, techId? }
+// ── Current session ──
+export let currentUser = null;
+// { uid, email, name, role, avatar, shopId }
 
 // ── Role permissions ──
 export const ROLES = {
   admin:   { label: '👑 مدير',  modules: ['overview','maintenance','pos','stock-purchases','other-purchases','warehouse','hr','reports','settings','manage-techs','technicians'] },
   tech:    { label: '🔧 فني',   modules: ['mywork'] },
-  cashier: { label: '🛒 كاشير', modules: ['pos','maintenance'] },
+  cashier: { label: '🛒 كاشير', modules: ['overview','pos','maintenance'] },
 };
 
-// ── Listen to auth state (called once on app load) ──
+// ── Init auth listener ──
 export function initAuth(onLogin, onLogout) {
-  onAuthStateChanged(auth, async (firebaseUser) => {
-    if (firebaseUser) {
-      const snap = await getDoc(doc(db, COLLECTIONS.USERS, firebaseUser.uid));
-      if (snap.exists()) {
-        currentUser = { uid: firebaseUser.uid, email: firebaseUser.email, ...snap.data() };
-        onLogin(currentUser);
-      } else {
-        // user doc missing — sign out
-        await signOut(auth);
-        onLogout();
-      }
-    } else {
-      currentUser = null;
+  onAuthStateChanged(auth, async (fbUser) => {
+    if (!fbUser) { currentUser = null; onLogout(); return; }
+
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.USERS, fbUser.uid));
+      if (!snap.exists()) { await signOut(auth); onLogout(); return; }
+
+      currentUser = { uid: fbUser.uid, email: fbUser.email, ...snap.data() };
+      onLogin(currentUser);
+    } catch (err) {
+      console.error('[auth] initAuth error:', err.code);
       onLogout();
     }
   });
@@ -44,8 +43,8 @@ export function initAuth(onLogin, onLogout) {
 export async function login(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   const snap = await getDoc(doc(db, COLLECTIONS.USERS, cred.user.uid));
-  if (!snap.exists()) throw new Error('بيانات المستخدم غير موجودة');
-  currentUser = { uid: cred.user.uid, ...snap.data() };
+  if (!snap.exists()) throw new Error('بيانات المستخدم غير موجودة في النظام');
+  currentUser = { uid: cred.user.uid, email: cred.user.email, ...snap.data() };
   return currentUser;
 }
 
@@ -55,18 +54,26 @@ export async function logout() {
   currentUser = null;
 }
 
-// ── Create user (admin only) ──
-export async function createUser({ email, password, name, role, avatar, techId }) {
+// ── Create user (admin only, same shop) ──
+export async function createUser({ email, password, name, role, avatar, shopId }) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await setDoc(doc(db, COLLECTIONS.USERS, cred.user.uid), {
-    name, role, avatar: avatar || name.charAt(0),
-    ...(techId ? { techId } : {})
+  const uid  = cred.user.uid;
+  await setDoc(doc(db, COLLECTIONS.USERS, uid), {
+    name,
+    role,
+    avatar: avatar || name.charAt(0),
+    shopId,           // ← ربط المستخدم بالمحل
   });
-  return cred.user.uid;
+  return uid;
 }
 
-// ── Check if current user can access a module ──
+// ── Permission check ──
 export function canAccess(moduleId) {
   if (!currentUser) return false;
   return ROLES[currentUser.role]?.modules.includes(moduleId) ?? false;
+}
+
+// ── Get current shopId ──
+export function getShopId() {
+  return currentUser?.shopId ?? null;
 }

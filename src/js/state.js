@@ -1,11 +1,15 @@
 // src/js/state.js
-import { db, COLLECTIONS } from './firebase.js';
+// Multi-tenant: كل query مفلترة بـ shopId تلقائياً
+
+import { db, COLLECTIONS }    from './firebase.js';
+import { getShopId }          from './auth.js';
 import {
   collection, onSnapshot, query,
-  orderBy, limit, doc
+  orderBy, limit, where, doc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 export const state = {
+  shopId:            null,   // ← المفتاح الأساسي للـ multi-tenant
   devices:           [],
   sales:             [],
   products:          [],
@@ -28,20 +32,30 @@ export const state = {
 const _unsubs = [];
 
 export function startListeners(onChange) {
+  const shopId = getShopId();
+  if (!shopId) { console.error('[state] No shopId — cannot start listeners'); return; }
+  state.shopId = shopId;
 
-  // ── Generic collection listener ──
-  const listenCol = (colName, stateKey, q) => {
+  // ── Helper: listener مع فلتر shopId تلقائي ──
+  const listenShop = (colName, stateKey, extraOrders = []) => {
     state.loading[stateKey] = true;
-    const ref = q ?? query(collection(db, colName), orderBy('date', 'desc'), limit(200));
-    const unsub = onSnapshot(ref,
+
+    let q = query(
+      collection(db, colName),
+      where('shopId', '==', shopId),
+      ...extraOrders,
+      limit(300)
+    );
+
+    const unsub = onSnapshot(q,
       (snap) => {
         state[stateKey] = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
         state.loading[stateKey] = false;
         onChange(stateKey);
       },
       (err) => {
-        // Suppress index-missing noise in console for empty collections
-        if (!err.message.includes('requires an index')) {
+        // index errors are normal on empty collections — silent
+        if (err.code !== 'failed-precondition') {
           console.error(`[state] ${stateKey}:`, err.code);
         }
         state[stateKey] = [];
@@ -52,31 +66,28 @@ export function startListeners(onChange) {
     _unsubs.push(unsub);
   };
 
-  listenCol(COLLECTIONS.DEVICES,         'devices');
-  listenCol(COLLECTIONS.SALES,           'sales');
-  listenCol(COLLECTIONS.PRODUCTS,        'products',
-    query(collection(db, COLLECTIONS.PRODUCTS), orderBy('name'), limit(500)));
-  listenCol(COLLECTIONS.STOCK_PURCHASES, 'stockPurchases');
-  listenCol(COLLECTIONS.OTHER_PURCHASES, 'otherPurchases');
-  listenCol(COLLECTIONS.WAREHOUSE,       'warehouse',
-    query(collection(db, COLLECTIONS.WAREHOUSE), orderBy('name'), limit(500)));
-  listenCol(COLLECTIONS.WH_MOVEMENTS,    'whMovements');
-  listenCol(COLLECTIONS.EMPLOYEES,       'employees',
-    query(collection(db, COLLECTIONS.EMPLOYEES), orderBy('name'), limit(100)));
-  listenCol(COLLECTIONS.ATTENDANCE,      'attendance');
-  listenCol(COLLECTIONS.ADVANCES,        'advances');
-  listenCol(COLLECTIONS.SALARY_RECORDS,  'salaryRecords');
-  listenCol(COLLECTIONS.INSURANCE,       'insurancePayments',
-    query(collection(db, COLLECTIONS.INSURANCE), orderBy('month', 'desc'), limit(24)));
-  listenCol(COLLECTIONS.CUSTOMERS,       'customers');
+  listenShop(COLLECTIONS.DEVICES,         'devices',          [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.SALES,           'sales',            [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.PRODUCTS,        'products',         [orderBy('name')]);
+  listenShop(COLLECTIONS.STOCK_PURCHASES, 'stockPurchases',   [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.OTHER_PURCHASES, 'otherPurchases',   [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.WAREHOUSE,       'warehouse',        [orderBy('name')]);
+  listenShop(COLLECTIONS.WH_MOVEMENTS,    'whMovements',      [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.EMPLOYEES,       'employees',        [orderBy('name')]);
+  listenShop(COLLECTIONS.ATTENDANCE,      'attendance',       [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.ADVANCES,        'advances',         [orderBy('date','desc')]);
+  listenShop(COLLECTIONS.SALARY_RECORDS,  'salaryRecords',    [orderBy('month','desc')]);
+  listenShop(COLLECTIONS.INSURANCE,       'insurancePayments',[orderBy('month','desc')]);
+  listenShop(COLLECTIONS.CUSTOMERS,       'customers',        [orderBy('name')]);
 
-  // ── Settings — single doc listener ──
+  // ── Settings — doc واحد لكل محل ──
   const settingsUnsub = onSnapshot(
     collection(db, COLLECTIONS.SETTINGS),
     (snap) => {
-      if (!snap.empty) {
-        const d = snap.docs[0];
-        state.settings = { _id: d.id, ...d.data() };
+      // فلتر يدوي لأن settings doc ID = shopId
+      const myDoc = snap.docs.find(d => d.id === shopId);
+      if (myDoc) {
+        state.settings = { _id: myDoc.id, ...myDoc.data() };
         onChange('settings');
       }
     },
@@ -88,8 +99,13 @@ export function startListeners(onChange) {
 export function stopListeners() {
   _unsubs.forEach(u => u());
   _unsubs.length = 0;
+  state.shopId = null;
 }
 
-export const empName     = (id)  => state.employees.find(e => e._id === id)?.name ?? '—';
-export const today       = ()    => new Date().toISOString().slice(0, 10);
-export const currentMonth= ()    => new Date().toISOString().slice(0, 7);
+// ── Helpers ──
+export const empName      = (id) => state.employees.find(e => e._id === id)?.name ?? '—';
+export const today        = ()   => new Date().toISOString().slice(0, 10);
+export const currentMonth = ()   => new Date().toISOString().slice(0, 7);
+
+// ── Shortcut: shopId for writes ──
+export const shopId = () => state.shopId;
