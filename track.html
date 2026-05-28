@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تتبع جهازك — Mobile Hub</title>
+<link rel="stylesheet" href="src/css/variables.css">
+<link rel="stylesheet" href="src/css/base.css">
+<link rel="stylesheet" href="src/css/components.css">
+<style>
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+    background: var(--bg);
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  .track-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px 32px;
+    width: 100%; max-width: 500px;
+    box-shadow: var(--shadow), var(--glow);
+    animation: slideUp 0.5s ease;
+    position: relative; z-index: 1;
+  }
+
+  .track-header { text-align: center; margin-bottom: 28px; }
+  .track-header .logo {
+    font-size: 52px; display: block; margin-bottom: 12px;
+  }
+  .track-header h2 { font-size: 22px; font-weight: 900; }
+  .track-header p  { color: var(--text2); font-size: 13px; margin-top: 5px; }
+  .shop-name { color: var(--accent); font-weight: 700; }
+
+  .device-result { animation: fadeIn 0.4s ease; }
+
+  .device-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin: 18px 0;
+  }
+  .info-cell {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .info-cell .lbl { font-size: 11px; color: var(--text2); font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
+  .info-cell .val { font-size: 14px; font-weight: 700; }
+
+  .ready-banner {
+    background: rgba(46,213,115,0.08);
+    border: 1px solid rgba(46,213,115,0.25);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    margin-top: 16px;
+  }
+  .ready-banner .big { font-size: 28px; margin-bottom: 8px; }
+  .ready-banner p { color: var(--success); font-weight: 700; font-size: 15px; }
+  .ready-banner small { color: var(--text2); font-size: 12px; }
+
+  .back-btn {
+    display: block; text-align: center;
+    margin-top: 18px;
+    color: var(--text2); font-size: 13px;
+    cursor: pointer; transition: color var(--trans);
+  }
+  .back-btn:hover { color: var(--accent); }
+
+  @media (max-width: 480px) {
+    .track-card { padding: 24px 18px; }
+    .device-info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="track-card" id="trackCard">
+
+  <div class="track-header">
+    <span class="logo">📱</span>
+    <h2 id="trackShopName">Mobile Hub</h2>
+    <p>تتبع حالة جهازك بشكل لحظي</p>
+  </div>
+
+  <!-- Search form (shown initially) -->
+  <div id="searchForm">
+    <div class="form-group">
+      <label class="form-label">رقم هاتفك</label>
+      <input type="tel" class="form-control" id="phoneInput"
+             placeholder="07XXXXXXXX"
+             style="text-align:center;font-size:20px;letter-spacing:3px;"
+             onkeydown="if(event.key==='Enter') searchDevice()">
+    </div>
+    <div id="searchAlert"></div>
+    <button class="btn btn-primary btn-block" onclick="searchDevice()">🔍 بحث عن جهازي</button>
+    <a href="index.html" class="back-btn">← تسجيل دخول الموظفين</a>
+  </div>
+
+  <!-- Results -->
+  <div id="resultArea" style="display:none;"></div>
+
+</div>
+
+<script type="module">
+import { db, COLLECTIONS } from './src/js/firebase.js';
+import {
+  collection, query, where, getDocs, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { statusBadge, MAINT_STATUSES, currency } from './src/js/utils.js';
+
+const STATUSES     = ['استلام','تشخيص','إصلاح','جاهز','تسليم'];
+const STATUS_ICONS = ['📥','🔍','🔧','✅','📦'];
+
+// ── Read phone from URL param ──
+const params    = new URLSearchParams(location.search);
+const initPhone = params.get('phone');
+if (initPhone) {
+  document.getElementById('phoneInput').value = initPhone;
+  searchDeviceWith(initPhone);
+}
+
+// ── Load shop name ──
+(async () => {
+  try {
+    const snap = await getDocs(collection(db, COLLECTIONS.SETTINGS));
+    snap.forEach(d => {
+      const n = d.data()?.name;
+      if (n) document.getElementById('trackShopName').textContent = n;
+    });
+  } catch(_) {}
+})();
+
+// ── Search ──
+window.searchDevice = () => {
+  const phone = document.getElementById('phoneInput').value.trim();
+  searchDeviceWith(phone);
+};
+
+async function searchDeviceWith(phone) {
+  if (!phone) return;
+  const alertEl = document.getElementById('searchAlert');
+  alertEl.innerHTML = '<div class="alert alert-info">🔍 جاري البحث...</div>';
+
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.DEVICES),
+      where('phone', '==', phone),
+      orderBy('date', 'desc')
+    );
+    const snap = await getDocs(q);
+    alertEl.innerHTML = '';
+
+    if (snap.empty) {
+      alertEl.innerHTML = '<div class="alert alert-danger">❌ لم يتم العثور على أي جهاز بهذا الرقم</div>';
+      return;
+    }
+
+    // Show results
+    const devices = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    renderResults(devices, phone);
+  } catch(err) {
+    alertEl.innerHTML = `<div class="alert alert-danger">❌ خطأ: ${err.message}</div>`;
+  }
+}
+
+function renderResults(devices, phone) {
+  document.getElementById('searchForm').style.display = 'none';
+  const area = document.getElementById('resultArea');
+  area.style.display = 'block';
+
+  // Active device (not delivered) first, else most recent
+  const active = devices.find(d => d.status !== 'تسليم') || devices[0];
+
+  const si = STATUSES.indexOf(active.status);
+  const timelineHtml = STATUSES.map((s, i) => {
+    const cls = i < si ? 'done' : i === si ? 'active' : '';
+    const line = i > 0 ? `<div class="timeline-line ${i <= si ? 'done' : ''}"></div>` : '';
+    return `
+      ${line}
+      <div class="timeline-step ${cls}">
+        <div class="timeline-dot">${STATUS_ICONS[i]}</div>
+        <div class="timeline-label">${s}</div>
+      </div>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="device-result">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:6px;">جهازك الحالي في الصيانة</div>
+        <div style="font-size:20px;font-weight:900;">${active.device}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;">${active.model || ''}</div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);text-align:center;margin-bottom:12px;">حالة الإصلاح</div>
+        <div class="timeline">${timelineHtml}</div>
+      </div>
+
+      <div class="device-info-grid">
+        <div class="info-cell">
+          <div class="lbl">رقم التتبع</div>
+          <div class="val device-id">${active._id}</div>
+        </div>
+        <div class="info-cell">
+          <div class="lbl">العطل</div>
+          <div class="val">${active.issue}</div>
+        </div>
+        <div class="info-cell">
+          <div class="lbl">تكلفة الإصلاح</div>
+          <div class="val" style="color:var(--accent3);">${currency(active.cost)}</div>
+        </div>
+        <div class="info-cell">
+          <div class="lbl">تاريخ الاستلام</div>
+          <div class="val">${active.date || '—'}</div>
+        </div>
+      </div>
+
+      ${active.status === 'جاهز' ? `
+        <div class="ready-banner">
+          <div class="big">🎉</div>
+          <p>جهازك جاهز للاستلام!</p>
+          <small>تفضل لاستلام جهازك في أي وقت</small>
+        </div>
+      ` : ''}
+
+      ${devices.length > 1 ? `
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">أجهزة أخرى (${devices.length - 1})</div>
+          ${devices.slice(1).map(d => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+              <span style="font-size:13px;font-weight:700;">${d.device}</span>
+              ${statusBadge(d.status)}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <button class="btn btn-ghost btn-block" style="margin-top:18px;"
+              onclick="document.getElementById('searchForm').style.display='block';
+                       document.getElementById('resultArea').style.display='none';">
+        ← بحث برقم آخر
+      </button>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

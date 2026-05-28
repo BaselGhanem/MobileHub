@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Hub — الإعداد الأولي</title>
+<link rel="stylesheet" href="src/css/variables.css">
+<link rel="stylesheet" href="src/css/base.css">
+<link rel="stylesheet" href="src/css/components.css">
+<style>
+  body {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  .setup-card {
+    position: relative; z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 44px 36px;
+    width: 100%; max-width: 480px;
+    box-shadow: var(--shadow), var(--glow);
+    animation: slideUp 0.5s ease;
+  }
+
+  .setup-header { text-align: center; margin-bottom: 32px; }
+  .setup-icon {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 34px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(108,99,255,0.4);
+  }
+  .setup-header h1 {
+    font-size: 24px; font-weight: 900;
+    background: linear-gradient(135deg, #fff, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .setup-header p { color: var(--text2); font-size: 13px; margin-top: 6px; }
+
+  .warning-box {
+    background: rgba(255,165,2,0.08);
+    border: 1px solid rgba(255,165,2,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--warning);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+
+  .step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-icon { font-size: 18px; flex-shrink: 0; }
+  .step-status { margin-right: auto; font-weight: 700; font-size: 12px; }
+  .step-status.pending  { color: var(--text2); }
+  .step-status.loading  { color: var(--warning); }
+  .step-status.done     { color: var(--success); }
+  .step-status.error    { color: var(--danger); }
+
+  #setupLog {
+    margin-top: 20px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text2);
+    min-height: 60px;
+    display: none;
+    line-height: 1.8;
+  }
+
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 20px 0;
+    animation: fadeIn 0.4s ease;
+  }
+  .success-screen .big { font-size: 56px; margin-bottom: 16px; }
+  .success-screen h2 { font-size: 20px; font-weight: 900; color: var(--success); }
+  .success-screen p { color: var(--text2); font-size: 13px; margin-top: 8px; }
+
+  .user-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg); border-radius: var(--radius-sm);
+    margin-bottom: 8px; margin-top: 16px;
+    font-size: 13px;
+  }
+  .user-row .avatar { width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0; }
+  .user-row .info { flex:1; }
+  .user-row .name { font-weight:700; }
+  .user-row .email { font-size:11px; color:var(--text2); }
+  .user-row .role-badge { background:rgba(108,99,255,0.12);color:var(--accent);padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="setup-card">
+
+  <!-- Header -->
+  <div class="setup-header">
+    <div class="setup-icon">⚙️</div>
+    <h1>الإعداد الأولي</h1>
+    <p>إنشاء حسابات النظام في Firebase تلقائياً</p>
+  </div>
+
+  <!-- Warning -->
+  <div class="warning-box">
+    ⚠️ شغّل هاي الصفحة <strong>مرة وحدة فقط</strong> عند أول إعداد للنظام. بعدها احذفها من المشروع.
+  </div>
+
+  <!-- Main form (hidden after success) -->
+  <div id="setupForm">
+
+    <div class="form-group">
+      <label class="form-label">اسم المحل</label>
+      <input type="text" class="form-control" id="shopName" value="Mobile Hub" placeholder="اسم محلك">
+    </div>
+
+    <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px;margin-top:20px;">
+      👑 حساب المدير الرئيسي
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">الاسم الكامل</label>
+      <input type="text" class="form-control" id="adminName" value="باسل" placeholder="اسمك">
+    </div>
+    <div class="form-group">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" class="form-control" id="adminEmail" value="admin@mobilehub.jo" placeholder="email@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور</label>
+      <input type="password" class="form-control" id="adminPass" placeholder="6 أحرف على الأقل" minlength="6">
+    </div>
+
+    <!-- Optional: extra users -->
+    <details style="margin-top:16px;">
+      <summary style="font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;padding:8px 0;">
+        ➕ إضافة فنيين عند الإعداد (اختياري)
+      </summary>
+      <div style="margin-top:14px;" id="techList">
+        <div class="tech-entry" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;" data-index="0">
+          <input type="text"  class="form-control" placeholder="الاسم" data-field="name">
+          <input type="email" class="form-control" placeholder="البريد" data-field="email">
+          <input type="password" class="form-control" placeholder="كلمة المرور" data-field="pass">
+        </div>
+      </div>
+      <button type="button" onclick="addTechRow()" class="btn btn-ghost btn-sm" style="margin-top:4px;">+ إضافة فني آخر</button>
+    </details>
+
+    <!-- Steps progress -->
+    <div id="stepsArea" style="margin-top:24px;display:none;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;">سير العمليات</div>
+      <div class="step" id="step-shop">
+        <span class="step-icon">🏪</span>
+        <span>إنشاء إعدادات المحل</span>
+        <span class="step-status pending" id="status-shop">انتظار</span>
+      </div>
+      <div class="step" id="step-admin">
+        <span class="step-icon">👑</span>
+        <span>إنشاء حساب المدير</span>
+        <span class="step-status pending" id="status-admin">انتظار</span>
+      </div>
+      <div class="step" id="step-techs">
+        <span class="step-icon">🔧</span>
+        <span>إنشاء حسابات الفنيين</span>
+        <span class="step-status pending" id="status-techs">انتظار</span>
+      </div>
+      <div class="step" id="step-sample">
+        <span class="step-icon">📦</span>
+        <span>إضافة بيانات تجريبية</span>
+        <span class="step-status pending" id="status-sample">انتظار</span>
+      </div>
+    </div>
+
+    <div id="setupLog"></div>
+    <div id="setupAlert"></div>
+
+    <button class="btn btn-primary btn-block btn-lg" style="margin-top:22px;" id="setupBtn" onclick="runSetup()">
+      🚀 بدء الإعداد التلقائي
+    </button>
+  </div>
+
+  <!-- Success screen -->
+  <div class="success-screen" id="successScreen">
+    <div class="big">🎉</div>
+    <h2>تم الإعداد بنجاح!</h2>
+    <p>تم إنشاء جميع الحسابات وبيانات المحل في Firebase</p>
+
+    <div id="createdUsers"></div>
+
+    <div class="alert alert-warning" style="margin-top:20px;text-align:right;">
+      ⚠️ <strong>مهم:</strong> احذف ملف <code>setup.html</code> من مشروعك الآن
+    </div>
+
+    <a href="index.html" class="btn btn-primary btn-block btn-lg" style="margin-top:16px;">
+      الذهاب لصفحة الدخول ←
+    </a>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp }                      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp }
+                                              from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, createUserWithEmailAndPassword, signOut }
+                                              from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU',
+  authDomain:        'mobilehub-4eb1d.firebaseapp.com',
+  projectId:         'mobilehub-4eb1d',
+  storageBucket:     'mobilehub-4eb1d.firebasestorage.app',
+  messagingSenderId: '13420871425',
+  appId:             '1:13420871425:web:76fb7e44e6f23e0e25a500',
+};
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// ── Helpers ──
+const setStatus = (id, status, text) => {
+  const el = document.getElementById('status-' + id);
+  if (!el) return;
+  el.className = `step-status ${status}`;
+  el.textContent = { pending:'انتظار', loading:'جاري...', done:'✅ تم', error:'❌ خطأ' }[status] || text;
+};
+
+const log = (msg) => {
+  const el = document.getElementById('setupLog');
+  el.style.display = 'block';
+  el.innerHTML += `> ${msg}<br>`;
+  el.scrollTop = el.scrollHeight;
+};
+
+// ── Add tech row ──
+window.addTechRow = () => {
+  const list = document.getElementById('techList');
+  const idx  = list.querySelectorAll('.tech-entry').length;
+  const div  = document.createElement('div');
+  div.className = 'tech-entry';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;';
+  div.innerHTML = `
+    <input type="text"     class="form-control" placeholder="الاسم"        data-field="name">
+    <input type="email"    class="form-control" placeholder="البريد"       data-field="email">
+    <input type="password" class="form-control" placeholder="كلمة المرور" data-field="pass">
+  `;
+  list.appendChild(div);
+};
+
+// ── Main setup ──
+window.runSetup = async () => {
+  const shopName  = document.getElementById('shopName').value.trim();
+  const adminName = document.getElementById('adminName').value.trim();
+  const adminEmail= document.getElementById('adminEmail').value.trim();
+  const adminPass = document.getElementById('adminPass').value;
+  const alertEl   = document.getElementById('setupAlert');
+  const btn       = document.getElementById('setupBtn');
+
+  // Validation
+  if (!shopName || !adminName || !adminEmail || !adminPass) {
+    alertEl.innerHTML = '<div class="alert alert-danger">❌ يرجى ملء جميع الحقول</div>';
+    return;
+  }
+  if (adminPass.length < 6) {
+    alertEl.innerHTML = '<div class="alert alert-danger">❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل</div>';
+    return;
+  }
+
+  alertEl.innerHTML = '';
+  btn.disabled = true;
+  btn.innerHTML = '<div style="width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;margin-left:8px;vertical-align:middle;"></div> جاري الإعداد...';
+  document.getElementById('stepsArea').style.display = 'block';
+
+  const createdUsers = [];
+
+  try {
+    // ── Step 1: Shop settings ──
+    setStatus('shop', 'loading');
+    await setDoc(doc(db, 'settings', 'shop'), {
+      name:     shopName,
+      phone:    '',
+      address:  '',
+      currency: 'JOD',
+      createdAt: new Date().toISOString(),
+    });
+    log(`✅ إعدادات المحل: "${shopName}"`);
+    setStatus('shop', 'done');
+
+    // ── Step 2: Admin user ──
+    setStatus('admin', 'loading');
+    const adminCred = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+    const adminUID  = adminCred.user.uid;
+    const adminAvatar = adminName.charAt(0);
+
+    await setDoc(doc(db, 'users', adminUID), {
+      name:   adminName,
+      role:   'admin',
+      avatar: adminAvatar,
+    });
+    log(`✅ المدير: ${adminName} (${adminEmail}) — UID: ${adminUID}`);
+    setStatus('admin', 'done');
+    createdUsers.push({ name: adminName, email: adminEmail, role: 'admin', avatar: adminAvatar });
+
+    // Sign out admin so we can create more users
+    await signOut(auth);
+
+    // ── Step 3: Technicians ──
+    setStatus('techs', 'loading');
+    const techEntries = [...document.querySelectorAll('.tech-entry')];
+    let techCount = 0;
+
+    for (const entry of techEntries) {
+      const name  = entry.querySelector('[data-field="name"]')?.value.trim();
+      const email = entry.querySelector('[data-field="email"]')?.value.trim();
+      const pass  = entry.querySelector('[data-field="pass"]')?.value;
+
+      if (!name || !email || !pass || pass.length < 6) continue;
+
+      try {
+        const cred   = await createUserWithEmailAndPassword(auth, email, pass);
+        const uid    = cred.user.uid;
+        const avatar = name.charAt(0);
+
+        await setDoc(doc(db, 'users', uid), {
+          name, role: 'tech', avatar,
+        });
+
+        // Also create employee record
+        await setDoc(doc(db, 'employees', uid), {
+          name, role: 'فني صيانة',
+          salary: 300,
+          insuranceNum: '',
+          joinDate: new Date().toISOString().slice(0, 10),
+          avatar, uid,
+        });
+
+        log(`✅ فني: ${name} (${email})`);
+        createdUsers.push({ name, email, role: 'tech', avatar });
+        techCount++;
+        await signOut(auth);
+      } catch (err) {
+        log(`⚠️ فشل إنشاء ${email}: ${err.message}`);
+      }
+    }
+
+    setStatus('techs', techCount > 0 ? 'done' : 'done');
+    if (techCount === 0) log('ℹ️ لم يتم إضافة فنيين');
+
+    // ── Step 4: Sample data ──
+    setStatus('sample', 'loading');
+
+    // Sample warehouse items
+    const sampleProducts = [
+      { name:'كابل شحن أصلي', cat:'ملحقات', emoji:'🔌', stock:20, minStock:10, costPrice:3, sellPrice:8, updated: new Date().toISOString().slice(0,10) },
+      { name:'كفر حماية',      cat:'ملحقات', emoji:'🛡️', stock:50, minStock:20, costPrice:2, sellPrice:5, updated: new Date().toISOString().slice(0,10) },
+      { name:'شاشة حماية',    cat:'ملحقات', emoji:'📺', stock:100,minStock:30, costPrice:1, sellPrice:3, updated: new Date().toISOString().slice(0,10) },
+      { name:'شاحن سريع',     cat:'ملحقات', emoji:'⚡', stock:15, minStock:8,  costPrice:7, sellPrice:12,updated: new Date().toISOString().slice(0,10) },
+    ];
+
+    for (const item of sampleProducts) {
+      await addDoc(collection(db, 'warehouse'), item);
+      await addDoc(collection(db, 'products'),  { name: item.name, cat: item.cat, price: item.sellPrice, stock: item.stock, emoji: item.emoji });
+    }
+
+    log(`✅ تم إضافة ${sampleProducts.length} منتجات تجريبية`);
+    setStatus('sample', 'done');
+
+    // ── Show success ──
+    document.getElementById('setupForm').style.display = 'none';
+    const successEl = document.getElementById('successScreen');
+    successEl.style.display = 'block';
+
+    document.getElementById('createdUsers').innerHTML = createdUsers.map(u => `
+      <div class="user-row">
+        <div class="avatar">${u.avatar}</div>
+        <div class="info">
+          <div class="name">${u.name}</div>
+          <div class="email">${u.email}</div>
+        </div>
+        <span class="role-badge">${u.role === 'admin' ? '👑 مدير' : '🔧 فني'}</span>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    log(`❌ خطأ: ${err.message}`);
+    alertEl.innerHTML = `<div class="alert alert-danger" style="margin-top:16px;">❌ ${err.message}</div>`;
+    btn.disabled = false;
+    btn.innerHTML = '🚀 إعادة المحاولة';
+
+    // Mark failed step
+    ['shop','admin','techs','sample'].forEach(s => {
+      if (document.getElementById('status-'+s).textContent === 'جاري...') {
+        setStatus(s, 'error');
+      }
+    });
+  }
+};
+</script>
+</body>
+</html>
