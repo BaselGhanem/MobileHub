@@ -83,6 +83,12 @@ import { register as regMyWork      } from './modules/maintenance/mywork.js';
 import { register as regTechs       } from './modules/maintenance/technicians.js';
 import { register as regManageTechs } from './modules/settings/manage-techs.js';
 import { register as regSettings    } from './modules/settings/settings.js';
+import { register as regPOS         } from './modules/pos/pos.js';
+import { register as regWarehouse   } from './modules/warehouse/warehouse.js';
+import { register as regStockPurch  } from './modules/purchases/stock-purchases.js';
+import { register as regOtherPurch  } from './modules/purchases/other-purchases.js';
+import { register as regHR          } from './modules/hr/hr.js';
+import { register as regReports     } from './modules/reports/reports.js';
 
 // ── Stub modules (Phase 2) ──
 function stubModule(id, label, icon, group) {
@@ -102,21 +108,18 @@ function stubModule(id, label, icon, group) {
   });
 }
 
-// ── Register real modules ──
 regOverview(registerModule);
 regMaintenance(registerModule);
 regMyWork(registerModule);
 regTechs(registerModule);
 regManageTechs(registerModule);
 regSettings(registerModule);
-
-// ── Register stubs for unbuilt modules ──
-stubModule('pos',             'المبيعات / POS',      '🛒', 'العمليات');
-stubModule('stock-purchases', 'مشتريات بضاعة',       '📦', 'المشتريات والمخزون');
-stubModule('other-purchases', 'مشتريات أخرى',        '🏪', 'المشتريات والمخزون');
-stubModule('warehouse',       'المستودع',             '🏭', 'المشتريات والمخزون');
-stubModule('hr',              'الموارد البشرية',      '👥', 'الموارد البشرية');
-stubModule('reports',         'التقارير المالية',     '📈', 'التقارير');
+regPOS(registerModule);
+regWarehouse(registerModule);
+regStockPurch(registerModule);
+regOtherPurch(registerModule);
+regHR(registerModule);
+regReports(registerModule);
 
 // ── Track if first load done ──
 let _firstRender = false;

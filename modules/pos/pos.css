@@ -1,2 +1,72 @@
-/* modules/pos/pos.css — placeholder, styles added in Phase 2 */
-.pos-module { display: block; }
+/* modules/pos/pos.css */
+
+/* ── Barcode scanner bar ── */
+.barcode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+  border-right: 3px solid var(--success);
+}
+
+.barcode-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(46,213,115,0.2);
+  animation: barcodePulse 2s infinite;
+}
+
+@keyframes barcodePulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(46,213,115,0.2); }
+  50%       { box-shadow: 0 0 0 7px rgba(46,213,115,0.05); }
+}
+
+/* ── Sub tabs ── */
+.pos-tab {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'Cairo', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--trans);
+}
+.pos-tab:hover { color: var(--text); background: var(--surface2); }
+.pos-tab-active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(108,99,255,0.35);
+}
+
+/* ── Product card hover ── */
+.pos-product-card { transition: border-color 0.2s, transform 0.2s; }
+.pos-product-card:hover { transform: translateY(-2px); }
+
+/* ── Receipt print styles ── */
+@media print {
+  .sidebar, .topbar, .bottom-nav,
+  .btn, .pos-tab, .search-bar,
+  #posProductGrid { display: none !important; }
+
+  #posCartWrap { border: none; }
+}
+
+/* Mobile: stack POS layout ── */
+@media (max-width: 768px) {
+  /* Products above, cart below */
+  #pos-cashier > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  #posProductGrid {
+    max-height: 220px !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
