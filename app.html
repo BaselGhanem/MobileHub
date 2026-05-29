@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="modules/purchases/purchases.css">
 <link rel="stylesheet" href="modules/hr/hr.css">
 <link rel="stylesheet" href="modules/reports/reports.css">
+<link rel="stylesheet" href="modules/invoices/invoices.css">
 <link rel="stylesheet" href="modules/settings/settings.css">
 </head>
 <body>
@@ -90,6 +91,7 @@ import { register as regStockPurch  } from './modules/purchases/stock-purchases.
 import { register as regOtherPurch  } from './modules/purchases/other-purchases.js';
 import { register as regHR          } from './modules/hr/hr.js';
 import { register as regReports     } from './modules/reports/reports.js';
+import { register as regInvoices    } from './modules/invoices/invoices.js';
 
 // ── Stub modules (Phase 2) ──
 function stubModule(id, label, icon, group) {
@@ -121,6 +123,7 @@ regStockPurch(registerModule);
 regOtherPurch(registerModule);
 regHR(registerModule);
 regReports(registerModule);
+regInvoices(registerModule);
 
 // ── Track if first load done ──
 let _firstRender = false;

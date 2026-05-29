@@ -1,0 +1,10 @@
+/* modules/invoices/invoices.css */
+.inv-line input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(108,99,255,0.12); }
+@media (max-width: 768px) {
+  .inv-line { grid-template-columns: 1fr 1fr !important; }
+  .inv-line button { grid-column: 2; }
+}
+@media print {
+  body > *:not(#invoice-print) { display: none !important; }
+  #invoice-print { display: block !important; }
+}

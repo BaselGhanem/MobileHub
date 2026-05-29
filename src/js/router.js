@@ -17,7 +17,7 @@ const NAV_GROUPS = [
   },
   {
     label: 'العمليات',
-    items: ['maintenance', 'pos', 'mywork'],
+    items: ['maintenance', 'pos', 'invoices', 'mywork'],
   },
   {
     label: 'المشتريات والمخزون',
@@ -73,7 +73,7 @@ export function buildSidebar() {
 
 // ── Bottom nav (mobile — 5 most important items) ──
 const BOTTOM_NAV_ITEMS = {
-  admin:   ['overview', 'maintenance', 'pos', 'warehouse', 'reports'],
+  admin:   ['overview', 'maintenance', 'pos', 'invoices', 'warehouse', 'reports'],
   tech:    ['mywork'],
   cashier: ['pos', 'maintenance'],
 };

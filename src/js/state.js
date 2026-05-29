@@ -21,6 +21,7 @@ export const state = {
   insurancePayments: [],
   settings:          {},
   customers:         [],
+  invoicesList:      [],
   activeModule:      'overview',
   sidebarOpen:       false,
   loading:           {},
@@ -76,6 +77,7 @@ export function startListeners(shopId, onChange) {
   listen(COLLECTIONS.SALARY_RECORDS,  'salaryRecords',     'month', true);
   listen(COLLECTIONS.INSURANCE,       'insurancePayments', 'month', true);
   listen(COLLECTIONS.CUSTOMERS,       'customers',         'name',  false);
+  listen('invoices',                  'invoicesList',      'date',  true);
 
   // Settings — single doc
   const su = onSnapshot(
